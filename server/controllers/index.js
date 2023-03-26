@@ -3,6 +3,8 @@ const models = require('../models');
 
 // get the Cat model
 const { Cat } = models;
+// dog models
+const { Dog } = models;
 
 // default fake data so that we have something to work with until we make a real Cat
 const defaultData = {
@@ -12,6 +14,7 @@ const defaultData = {
 
 // object for us to keep track of the last Cat we made and dynamically update it sometimes
 let lastAdded = new Cat(defaultData);
+let dogToSearch = new Dog(defaultData);
 
 // Function to handle rendering the index page.
 const hostIndex = (req, res) => {
@@ -68,7 +71,7 @@ const hostPage1 = async (req, res) => {
        do not want people to see actual error messages from your server or database, or else
        they can exploit them to attack your server.
     */
-    console.log(err);
+    // console.log(err);
     return res.status(500).json({ error: 'failed to find cats' });
   }
 };
@@ -83,8 +86,41 @@ const hostPage3 = (req, res) => {
   res.render('page3');
 };
 
+const hostPage4 = async (req, res) => {
+  try {
+    const docs = await Dog.find({}).lean().exec();
+    return res.render('page4', { dogs: docs });
+  } catch (err) {
+    // console.log(err);
+    return res.status(500).json({ error: 'no dogs found' });
+  }
+};
+
 // Get name will return the name of the last added cat.
 const getName = (req, res) => res.json({ name: lastAdded.name });
+
+const setDog = async (req, res) => {
+  if (!req.body.firstname || !req.body.lastname || !req.body.breed || !req.body.age) {
+    return res.status(400).json({ error: 'firstname, lastname, breed, and age are all required' });
+  }
+  const dogData = {
+    name: `${req.body.firstname} ${req.body.lastname}`,
+    breed: req.body.breed,
+    age: req.body.age,
+  };
+  const newDog = new Dog(dogData);
+  try {
+    await newDog.save();
+  } catch (err) {
+    // console.log(err);
+    return res.status(500).json({ error: 'failed to create dog' });
+  }
+  return res.json({
+    name: dogData.name,
+    breed: dogData.breed,
+    age: dogData.age,
+  });
+};
 
 // Function to create a new cat in the database
 const setName = async (req, res) => {
@@ -135,7 +171,7 @@ const setName = async (req, res) => {
        function, not just the catch statement. That means we can treat the code below the catch
        as being our "if the try worked"
     */
-    console.log(err);
+    // console.log(err);
     return res.status(500).json({ error: 'failed to create cat' });
   }
 
@@ -148,6 +184,29 @@ const setName = async (req, res) => {
     name: lastAdded.name,
     beds: lastAdded.bedsOwned,
   });
+};
+
+const searchDog = async (req, res) => {
+  if (!req.query.name) {
+    return res.status(400).json({ error: 'Name is required to perform a search' });
+  }
+  let doc;
+  try {
+    doc = await Dog.findOne({ name: req.query.name }).exec();
+  } catch (err) {
+    // console.log(err);
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+  if (!doc) {
+    return res.json({ error: 'No dog found' });
+  }
+
+  dogToSearch = doc;
+  dogToSearch.age++;
+  const savePromise = dogToSearch.save();
+
+  savePromise.catch(() => res.status(500).json({ error: 'Something went wrong' }));
+  return res.json({ name: doc.name, breed: doc.breed, age: doc.age });
 };
 
 // Function to handle searching a cat by name.
@@ -184,7 +243,7 @@ const searchName = async (req, res) => {
     doc = await Cat.findOne({ name: req.query.name }).exec();
   } catch (err) {
     // If there is an error, log it and send the user an error message.
-    console.log(err);
+    // console.log(err);
     return res.status(500).json({ error: 'Something went wrong' });
   }
 
@@ -202,8 +261,24 @@ const searchName = async (req, res) => {
    the right element in the database based on query, modifying it, and updating
    it. For this example we will just update the last one we added for simplicity.
 */
-const updateLast = (req, res) => {
+const updateLast = async (req, res) => {
   // First we will update the number of bedsOwned.
+  if (lastAdded.name === 'unknown') {
+    const tempCatList = await Cat.find().exec();
+    if (tempCatList) {
+      if (tempCatList[0] !== undefined) {
+        let date = tempCatList[0].createdDate;
+        for (let i = 0; i < tempCatList.length; i++) {
+          if (tempCatList[i].createdDate > date) {
+            date = tempCatList[i].createdDate;
+            lastAdded = tempCatList[i];
+          }
+        }
+      } else {
+        return res.status(304).json({ message: 'No cats to update' });
+      }
+    }
+  }
   lastAdded.bedsOwned++;
 
   /* Remember that lastAdded is a Mongoose document (made on line 14 if no new
@@ -228,10 +303,8 @@ const updateLast = (req, res) => {
   }));
 
   // If something goes wrong saving to the database, log the error and send a message to the client.
-  savePromise.catch((err) => {
-    console.log(err);
-    return res.status(500).json({ error: 'Something went wrong' });
-  });
+  savePromise.catch(() => res.status(500).json({ error: 'Something went wrong' }));
+  return res.status(204);
 };
 
 // A function to send back the 404 page.
@@ -247,9 +320,12 @@ module.exports = {
   page1: hostPage1,
   page2: hostPage2,
   page3: hostPage3,
+  page4: hostPage4,
   getName,
   setName,
   updateLast,
   searchName,
   notFound,
+  searchDog,
+  setDog,
 };

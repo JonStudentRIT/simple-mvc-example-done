@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "description": "A simple Express MVC using only static files",
   "main": "./server/app.js",
+  "engines": {
+    "node": "18.13.0",
+    "npm": "7.0.0"
+  },
   "scripts": {
     "nodemon": "nodemon --watch ./server ./server/app.js",
     "start": "node ./server/app.js",
@@ -10,7 +14,7 @@
     "test": "echo \"tests complete\""
   },
   "author": "Cody Van De Mark / Austin Willoughby",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "devDependencies": {
     "eslint": "^8.36.0",
     "eslint-config-airbnb": "^19.0.4",
@@ -24,5 +28,13 @@
     "express-handlebars": "^7.0.2",
     "mongoose": "^7.0.2",
     "serve-favicon": "^2.5.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JonStudentRIT/simple-mvc-example-done.git"
+  },
+  "bugs": {
+    "url": "https://github.com/JonStudentRIT/simple-mvc-example-done/issues"
+  },
+  "homepage": "https://github.com/JonStudentRIT/simple-mvc-example-done#readme"
 }
